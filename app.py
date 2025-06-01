@@ -4,6 +4,7 @@ import pandas as pd
 from PIL import Image
 import base64  #  Adicione isto
 import io      #  Necessário para converter imagem para base64
+from datetime import datetime
 
 # criar as funcões de carregamento de dados
 # verificar etapas ferramentas do lado esquerdo talvez pedir ajuda para o GPT
@@ -11,12 +12,17 @@ import io      #  Necessário para converter imagem para base64
 
 # preparar as visualizações
 
+st.set_page_config(
+    page_title="FiscAI",
+    layout="wide",
+    page_icon="💻",
+    initial_sidebar_state="collapsed"
+)
 
+# Importação para autorefresh do relógio
 
-
-
-
-
+from streamlit_autorefresh import st_autorefresh
+st_autorefresh(interval=1000, key="contador_reforma")
 
 
 
@@ -31,12 +37,6 @@ def carregar_banner_base64():
     return base64.b64encode(buffered.getvalue()).decode()
 # Configurações da página
 
-st.set_page_config(
-    page_title="FiscAI",
-    layout="wide",
-    page_icon="💻",
-    initial_sidebar_state="collapsed"
-)
 
 # CSS personalizado para transparência da sidebar
 st.markdown("""
@@ -103,7 +103,7 @@ if opcao == "🏠 Início":
     </style>
     """, unsafe_allow_html=True)
 
-    # Espaço reservado para o relógio
+        # Espaço reservado para o relógio
     clock_placeholder = st.empty()
 
     # Loop para atualização ao vivo por 3 minutos
