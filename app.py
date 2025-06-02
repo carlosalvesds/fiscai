@@ -40,7 +40,8 @@ st.sidebar.markdown("##  Menu")
 
 menu = st.sidebar.radio("Escolha uma opção:", [
     "🏠 Início",
-    "📂 Leitor XML | Regime Tributário"
+    "📄 Leitor PDF | Energia Elétrica",
+    "📂 Leitor XML | Regime Tributário",
 ])
 
 # Linha separadora visual
@@ -104,6 +105,10 @@ if menu == "🏠 Início":
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+elif menu == "📄 Leitor PDF | Energia Elétrica":
+    from ferramentas.leitor_pdf_nf3e import app as leitor_pdf_nf3e_app
+    leitor_pdf_nf3e_app()
 
 elif menu == "📂 Leitor XML | Regime Tributário":
     from ferramentas.leitor_rt import app as leitor_rt_app

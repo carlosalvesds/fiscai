@@ -82,9 +82,13 @@ def gerar_excel_formatado(df, caminho_saida, total_lidos, removidos, total_extra
 
 def app():
     st.title("📂 Leitor de XML - Regime Tributário")
-    st.write("Este aplicativo é otimizado para processar grandes volumes de arquivos XML compactados (.zip).")
+    st.markdown("""
+Este módulo analisa arquivos XML de NF-e para identificar automaticamente o regime tributário de cada fornecedor, 
+organizando os dados em uma planilha Excel. 
+Suporta o processamento de grandes volumes de XMLs, garantindo eficiência mesmo em operações com milhares de documentos.
+""")
 
-    uploaded_file = st.file_uploader("📥 Envie o arquivo (.zip) contendo XMLs", type="zip")
+    uploaded_file = st.file_uploader(" Envie o arquivo (.zip) contendo os XMLs das NF-e", type="zip")
 
     if uploaded_file is not None:
         with tempfile.TemporaryDirectory() as tmpdir:
