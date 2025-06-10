@@ -42,6 +42,7 @@ menu = st.sidebar.radio("Escolha uma opção:", [
     "🏠 Início",
     "📄 Leitor PDF | Energia Elétrica",
     "📂 Leitor XML | Regime Tributário",
+    "📊 Resumo     | Natureza da Receita" 
 ])
 
 # Linha separadora visual
@@ -113,3 +114,8 @@ elif menu == "📄 Leitor PDF | Energia Elétrica":
 elif menu == "📂 Leitor XML | Regime Tributário":
     from ferramentas.leitor_rt import app as leitor_rt_app
     leitor_rt_app()
+
+elif menu == "📊 Resumo     | Natureza da Receita":
+    from ferramentas.resumo_nat_receita import app as resumo_app
+    resumo_app()
+

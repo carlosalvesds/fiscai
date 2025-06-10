@@ -4,3 +4,5 @@ openpyxl
 pillow
 streamlit-autorefresh
 pdfplumber
+html5lib
+lxml
