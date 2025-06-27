@@ -3,7 +3,7 @@ import pandas as pd
 from io import BytesIO
 
 def app():
-    st.title("📊 Resumo por Código de Natureza da Receita")
+    st.title("📊 Leitor TXT | Natureza da Receita")
 
     st.markdown("""
     Esse módulo permite processar arquivos `.txt` contendo dados fiscais detalhados por item, com o objetivo de gerar um resumo agrupado por **Código de Natureza da Receita**.  

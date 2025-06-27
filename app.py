@@ -40,9 +40,10 @@ st.sidebar.markdown("##  Menu")
 
 menu = st.sidebar.radio("Escolha uma opção:", [
     "🏠 Início",
+    "📁 XML NF-e | Regime Tributário",
+    "📁 XML NF-e | Pendências",
     "📄 Leitor PDF | Energia Elétrica",
-    "📂 Leitor XML | Regime Tributário",
-    "📊 Resumo     | Natureza da Receita" 
+    "📊 Leitor TXT | Natureza da Receita"
 ])
 
 # Linha separadora visual
@@ -107,15 +108,20 @@ if menu == "🏠 Início":
     </div>
     """, unsafe_allow_html=True)
 
+
+elif menu == "📁 XML NF-e | Regime Tributário":
+    from ferramentas.leitor_rt import app as leitor_rt_app
+    leitor_rt_app()
+
+elif menu == "📁 XML NF-e | Pendências":
+    from ferramentas.xml_nfe_pendentes import app as pendentes_app
+    pendentes_app()
+
 elif menu == "📄 Leitor PDF | Energia Elétrica":
     from ferramentas.leitor_pdf_nf3e import app as leitor_pdf_nf3e_app
     leitor_pdf_nf3e_app()
 
-elif menu == "📂 Leitor XML | Regime Tributário":
-    from ferramentas.leitor_rt import app as leitor_rt_app
-    leitor_rt_app()
-
-elif menu == "📊 Resumo     | Natureza da Receita":
+elif menu == "📊 Leitor TXT | Natureza da Receita":
     from ferramentas.resumo_nat_receita import app as resumo_app
     resumo_app()
 
