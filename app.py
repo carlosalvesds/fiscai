@@ -42,8 +42,9 @@ menu = st.sidebar.radio("Escolha uma opção:", [
     "🏠 Início",
     "📁 XML NF-e | Regime Tributário",
     "📁 XML NF-e | Pendências",
+    "📁 XML NFC-e | Conferência",
     "📄 Leitor PDF | Energia Elétrica",
-    "📊 Leitor TXT | Natureza da Receita"
+    "📊 Leitor TXT | Natureza da Receita",
 ])
 
 # Linha separadora visual
@@ -116,6 +117,10 @@ elif menu == "📁 XML NF-e | Regime Tributário":
 elif menu == "📁 XML NF-e | Pendências":
     from ferramentas.xml_nfe_pendentes import app as pendentes_app
     pendentes_app()
+
+elif menu == "📁 XML NFC-e | Conferência":
+    from ferramentas.xml_nfce import app as xml_nfce_app
+    xml_nfce_app()
 
 elif menu == "📄 Leitor PDF | Energia Elétrica":
     from ferramentas.leitor_pdf_nf3e import app as leitor_pdf_nf3e_app
