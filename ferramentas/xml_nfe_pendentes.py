@@ -81,6 +81,9 @@ def aplicar_formatacao_excel(writer, sheet_name):
 
 def app():
     st.title("📁 XML NF-e | Pendências")
+    st.markdown("""
+Esta ferramenta processa arquivos XML de notas fiscais pendentes de manifestação, proporcionando uma análise detalhada e eficiente para a cobrança de documentos fiscais. Ela gera um resumo abrangente por nota fiscal, incluindo informações como data de emissão, valores e itens relacionados.
+""")
     uploaded_zip = st.file_uploader("Envie um arquivo .zip contendo os XMLs (pode ter subpastas)", type=["zip"])
 
     if uploaded_zip:
