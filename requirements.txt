@@ -6,3 +6,4 @@ streamlit-autorefresh
 pdfplumber
 html5lib
 lxml
+xlsxwriter
