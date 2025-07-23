@@ -17,7 +17,7 @@ def app():
         unsafe_allow_html=True
     )
     st.markdown("""
-Este módulo permite extrair automaticamente os principais dados fiscais de contas de energia elétrica no formato PDF (modelo NF3e). 
+Essa ferramenta permite extrair automaticamente os principais dados fiscais de contas de energia elétrica no formato PDF (modelo NF3e). 
 Você pode enviar um ou vários arquivos `.pdf`, ou um `.zip` contendo múltiplos PDFs. 
 O sistema identifica e organiza automaticamente as informações extraídas dos PDFs, gerando uma planilha Excel pronta para conferência.
 """)
@@ -82,7 +82,8 @@ O sistema identifica e organiza automaticamente as informações extraídas dos 
             resultado = processar_arquivos(uploaded_files)
             df_resultado = pd.DataFrame(resultado)
 
-        df_resultado["Valor (R$)"] = df_resultado["Valor (R$)"].str.replace(",", ".").astype(float)
+        if "Valor (R$)" in df_resultado.columns:
+            df_resultado["Valor (R$)"] = df_resultado["Valor (R$)"].str.replace(",", ".").astype(float)
         st.success("✅ Dados extraídos com sucesso!")
         st.dataframe(df_resultado)
 
