@@ -6,7 +6,7 @@ def app():
     st.title("📊 Leitor TXT | Natureza da Receita")
 
     st.markdown("""
-    Esse módulo permite processar arquivos `.txt` contendo dados fiscais detalhados por item, com o objetivo de gerar um resumo agrupado por **Código de Natureza da Receita**.  
+    Essa ferramenta permite processar arquivos `.txt` contendo dados fiscais detalhados por item, com o objetivo de gerar um resumo agrupado por **Código de Natureza da Receita**.  
     Essa funcionalidade é útil para análises de conferência tributária, auditoria interna e cruzamentos fiscais relacionados à receita declarada por tipo de operação.
     """)
 

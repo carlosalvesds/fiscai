@@ -83,7 +83,7 @@ def gerar_excel_formatado(df, caminho_saida, total_lidos, removidos, total_extra
 def app():
     st.title("📁 XML NF-e | Regime Tributário")
     st.markdown("""
-Este módulo analisa arquivos XML de NF-e para identificar automaticamente o regime tributário de cada fornecedor, 
+Essa ferramenta analisa arquivos XML de NF-e para identificar automaticamente o regime tributário de cada fornecedor, 
 organizando os dados em uma planilha Excel. 
 Suporta o processamento de grandes volumes de XMLs, garantindo eficiência mesmo em operações com milhares de documentos.
 """)
