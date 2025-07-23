@@ -83,7 +83,6 @@ O sistema identifica e organiza automaticamente as informações extraídas dos 
             df_resultado = pd.DataFrame(resultado)
 
         if "Valor (R$)" in df_resultado.columns:
-        if "Valor (R$)" in df_resultado.columns:
             df_resultado["Valor (R$)"] = df_resultado["Valor (R$)"].str.replace(",", ".").astype(float)
         else:
             st.warning("Coluna 'Valor (R$)' não encontrada nos dados extraídos. Verifique o arquivo enviado.")
