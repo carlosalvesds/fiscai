@@ -57,6 +57,15 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
             pis = imposto.find(".//nfe:PIS", ns) if imposto is not None else None
             cofins = imposto.find(".//nfe:COFINS", ns) if imposto is not None else None
 
+            # Extrai pRedBC (redução da base de cálculo do ICMS), se existir, especificamente de ICMS20
+            pRedBC = ""
+            if icms is not None:
+                icms20 = icms.find("nfe:ICMS20", ns)
+                if icms20 is not None:
+                    pRedBC = icms20.findtext("nfe:pRedBC", default="", namespaces=ns)
+                else:
+                    # fallback: busca em qualquer lugar dentro de ICMS
+                    pRedBC = icms.findtext(".//nfe:pRedBC", default="", namespaces=ns)
             linha = {
                 "nNF": nNF, "serie": serie, "dhEmi": dhEmi, "cNF": cNF,
                 "emit_CNPJ": emit_cnpj, "emit_xFant": emit_xfant,
@@ -87,7 +96,8 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                 "COFINS_vBC": cofins.findtext(".//nfe:vBC", default="", namespaces=ns) if cofins is not None else "",
                 "COFINS_pCOFINS": cofins.findtext(".//nfe:pCOFINS", default="", namespaces=ns) if cofins is not None else "",
                 "COFINS_vCOFINS": cofins.findtext(".//nfe:vCOFINS", default="", namespaces=ns) if cofins is not None else "",
-                "pag_tPag": tPag
+                "pag_tPag": tPag,
+                "pRedBC": pRedBC
             }
             resultado.append(linha)
         return resultado
@@ -251,7 +261,8 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
         "COFINS_vBC": "Base de Cálculo COFINS",
         "COFINS_pCOFINS": "Alíquota COFINS (%)",
         "COFINS_vCOFINS": "Valor COFINS",
-        "pag_tPag": "Tipo de Pagamento"
+    "pag_tPag": "Tipo de Pagamento",
+    "pRedBC": "Redução_BC_%"
     }
     df_xml_completo = df_xml_completo.rename(columns=colunas_legiveis)
     # Ajustar coluna de data para formato dd/mm/yyyy
@@ -295,14 +306,21 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                     ws = writer.sheets[nome]
                     ws.hide_gridlines(2)
                     for i, col in enumerate(df.columns):
-                        ws.write(0, i, col, header_format)
+                        # Centraliza o título da coluna Descrição_Produto
+                        if nome == "Resumo_Produtos" and col == "Descrição_Produto":
+                            ws.write(0, i, col, header_format)
+                        else:
+                            ws.write(0, i, col, header_format)
                         largura = max(len(str(col)), max((len(str(val)) for val in df[col]), default=0)) + 2
                         ws.set_column(i, i, largura)
                     for r, row in df.iterrows():
                         for c, val in enumerate(row):
                             col = df.columns[c]
+                            # Alinha à esquerda a coluna Descrição_Produto na aba Resumo_Produtos
+                            if nome == "Resumo_Produtos" and col == "Descrição_Produto":
+                                fmt = wb.add_format({'align': 'left'})
                             # Formatação monetária para XML_Completo
-                            if nome == "XML_Completo" and col in [
+                            elif nome == "XML_Completo" and col in [
                                 "Valor Produto", "Valor Desconto", "Valor Unitário Comercial", "Valor Unitário Tributável",
                                 "Base de Cálculo ICMS", "Valor ICMS",
                                 "Base de Cálculo PIS", "Valor PIS",
@@ -355,6 +373,57 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                 escrever_aba(df_dados, "Dados_NFC-e", colorir_cancelada=True)
                 escrever_aba(df_resumo_grouped, "Resumo CFOP")
                 escrever_aba(resumo_nf, "Resumo_NFC-e")
+                # Nova aba Resumo_Produtos preenchida com dados reais
+                if not df_xml_completo.empty:
+                    group_cols = ["Código Produto", "Descrição Produto", "NCM"]
+                    # Corrigir agregação para garantir que Base_Calculo seja valor monetário e Redução_BC_% seja porcentagem
+                    agg_dict = {
+                        "Valor Produto": "sum",
+                        "Valor ICMS": "sum",
+                        "Base de Cálculo ICMS": "sum",
+                        "Quantidade Comercial": lambda x: pd.to_numeric(x, errors="coerce").sum(),
+                        "Valor Unitário Comercial": lambda x: pd.to_numeric(x, errors="coerce").iloc[0] if len(x) > 0 else 0,
+                        "CST ICMS": lambda x: x.mode().iloc[0] if not x.mode().empty else '',
+                        "Alíquota ICMS (%)": lambda x: x.mode().iloc[0] if not x.mode().empty else ''
+                    }
+                    # Redução_BC_% (pRedBC) é uma porcentagem, não deve ser somada nem usada como base de cálculo
+                    # Não incluir Redução_BC_% no agrupamento
+                    resumo_produtos = df_xml_completo.groupby(group_cols, dropna=False).agg(agg_dict).reset_index()
+                    rename_dict = {
+                        "Código Produto": "Cod_Produto",
+                        "Descrição Produto": "Descrição_Produto",
+                        "NCM": "NCM",
+                        "Quantidade Comercial": "Quantidade",
+                        "Valor Unitário Comercial": "Valor_Unitario",
+                        "Valor Produto": "Valor_Total",
+                        "Valor ICMS": "Valor_ICMS",
+                        "Base de Cálculo ICMS": "Base_Calculo",
+                        "CST ICMS": "CST_ICMS",
+                        "Alíquota ICMS (%)": "Aliquota_ICMS_(%)"
+                    }
+                    if "pRedBC" in resumo_produtos.columns:
+                        rename_dict["pRedBC"] = "Redução_BC_%"
+                    resumo_produtos = resumo_produtos.rename(columns=rename_dict)
+                    # Garante a coluna Redução_BC_% mesmo se não existir
+                    # Não criar coluna Redução_BC_%
+                    # Seleciona as colunas na ordem correta
+                    resumo_produtos = resumo_produtos[[
+                        "Cod_Produto", "Descrição_Produto", "NCM", "Quantidade", "Valor_Unitario", "Valor_Total", "CST_ICMS", "Base_Calculo", "Aliquota_ICMS_(%)", "Valor_ICMS"
+                    ]]
+                    # Ordena pelo código do produto do menor para o maior
+                    try:
+                        resumo_produtos = resumo_produtos.sort_values(by="Cod_Produto", key=lambda x: pd.to_numeric(x, errors="coerce")).reset_index(drop=True)
+                    except Exception:
+                        resumo_produtos = resumo_produtos.sort_values(by="Cod_Produto").reset_index(drop=True)
+                else:
+                    resumo_produtos = pd.DataFrame(columns=["Cod_Produto", "Descrição_Produto", "NCM", "Quantidade", "Valor_Unitario", "Valor_Produto", "CST_ICMS", "Base_Calculo", "Aliquota_ICMS_(%)", "Valor_ICMS"])
+                # Formatar colunas de valores como moeda brasileira com duas casas decimais
+                for col in ["Valor_Total", "Base_Calculo", "Valor_ICMS", "Valor_Unitario"]:
+                    if col in resumo_produtos.columns:
+                        resumo_produtos[col] = resumo_produtos[col].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if pd.notnull(x) else "")
+                    # Não formatar Redução_BC_%
+                
+                escrever_aba(resumo_produtos, "Resumo_Produtos")
                 escrever_aba(df_xml_completo, "XML_Completo")
                 escrever_aba(df_seq, "Sequência")
                 escrever_aba(df_status, "Status")
@@ -362,3 +431,7 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
             tmp.seek(0)
             st.success("✅ Planilha gerada com sucesso!")
             st.download_button("📥 Baixar Planilha", tmp.read(), file_name="Dados NFC-e.xlsx")
+
+# Garante execução da função app() ao rodar com streamlit
+if __name__ == "__main__":
+    app()
