@@ -104,6 +104,8 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
 
     uploaded_file = st.file_uploader("Envie um arquivo .zip com XMLs de NFC-e", type="zip")
     dados, resumo, status, xml_completo = [], [], [], []
+    chaves_canceladas = set()
+
     if uploaded_file:
         with zipfile.ZipFile(uploaded_file, "r") as zip_ref:
             xml_files = [zip_ref.open(name) for name in zip_ref.namelist() if ".xml" in name.lower()]
@@ -119,6 +121,7 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                         dh_evento = root.findtext(".//nfe:dhEvento", namespaces=ns)
                         numero_doc = chave[25:34] if chave else None
                         serie = chave[22:25] if chave and len(chave) >= 25 else ""
+                        chaves_canceladas.add(chave)
 
                         dados.append({
                             "Número_Doc": int(numero_doc),
@@ -186,6 +189,12 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                     status.append({"Arquivo_XML": file.name, "Progresso": "OK"})
                 except Exception as e:
                     status.append({"Arquivo_XML": file.name, "Progresso": "ERRO"})
+
+    if chaves_canceladas:
+        dados = [
+            d for d in dados
+            if not (d["Situação_do_Documento"] == "Autorizado" and d["Chave_Acesso"] in chaves_canceladas)
+        ]
 
     df_dados = pd.DataFrame(dados)
     # Corrige erro caso a coluna 'Serie' não exista

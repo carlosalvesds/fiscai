@@ -45,6 +45,7 @@ menu = st.sidebar.radio("Escolha uma opção:", [
     "📁 XML NFC-e | Conferência",
     "📄 Leitor PDF | Energia Elétrica",
     "📊 Leitor TXT | Natureza da Receita",
+    "🔄 EXCEL - CSV | Lançamentos IRPF",
 ])
 
 # Linha separadora visual
@@ -129,4 +130,7 @@ elif menu == "📄 Leitor PDF | Energia Elétrica":
 elif menu == "📊 Leitor TXT | Natureza da Receita":
     from ferramentas.resumo_nat_receita import app as resumo_app
     resumo_app()
+elif menu == "🔄 EXCEL - CSV | Lançamentos IRPF":
+    from ferramentas.converter_xlsx_csv import app as converter_xlsx_csv_app
+    converter_xlsx_csv_app()
 
