@@ -168,6 +168,7 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                         "Serie": serie
                     })
 
+
                     for det in root.findall(".//nfe:det", ns):
                         cfop = det.findtext(".//nfe:CFOP", namespaces=ns)
                         cst = det.findtext(".//nfe:ICMS/*/nfe:CST", namespaces=ns)
@@ -184,6 +185,7 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                             "Base de Cálculo": float(vbc or 0),
                             "Alíquota": f"{float(picms):.2f}" if picms else "0.00",
                             "ICMS": float(vicms or 0),
+                            "Chave_Acesso": str(chave_acesso).zfill(44)
                         })
 
                     status.append({"Arquivo_XML": file.name, "Progresso": "OK"})
@@ -207,12 +209,52 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
     df_dados["Número_Doc"] = pd.to_numeric(df_dados["Número_Doc"], errors="coerce")
     df_dados = df_dados.sort_values(by=["Serie", "Número_Doc"]).reset_index(drop=True)
 
+    # Filtrar apenas notas autorizadas que NÃO estão canceladas para as abas de resumo, produtos e XML completo
+    chaves_canceladas = set(chaves_canceladas)
+    if "Situação_do_Documento" in df_dados.columns and "Chave_Acesso" in df_dados.columns:
+        chaves_autorizadas_validas = set(
+            df_dados.loc[
+                (df_dados["Situação_do_Documento"] == "Autorizado") &
+                (~df_dados["Chave_Acesso"].astype(str).isin(chaves_canceladas)),
+                "Chave_Acesso"
+            ].astype(str)
+        )
+    else:
+        chaves_autorizadas_validas = set()
+
+    # Função auxiliar para filtrar listas de dicts por chaves autorizadas válidas
+    def filtrar_por_chave(lista, chave_nome="Chave_Acesso"):
+        return [item for item in lista if str(item.get(chave_nome, "")) in chaves_autorizadas_validas]
+
+    # Filtrar resumo e xml_completo se possível
+    if resumo and chaves_autorizadas_validas:
+        # Se cada item do resumo tiver Chave_Acesso, filtra
+        if "Chave_Acesso" in resumo[0]:
+            resumo = filtrar_por_chave(resumo, "Chave_Acesso")
+    if xml_completo and chaves_autorizadas_validas:
+        # Se cada item do xml_completo tiver cNF, tenta filtrar por Chave_Acesso se existir
+        if "Chave_Acesso" in xml_completo[0]:
+            xml_completo = filtrar_por_chave(xml_completo, "Chave_Acesso")
+
     df_status = pd.DataFrame(status)
     df_resumo = pd.DataFrame(resumo)
     # Garante que as colunas existem antes do groupby
     for col in ["CST", "CFOP", "Alíquota", "Valor Total", "Base de Cálculo", "ICMS"]:
         if col not in df_resumo.columns:
             df_resumo[col] = None
+    # Filtra resumo apenas para notas autorizadas válidas
+    if (
+        "Chave_Acesso" in df_dados.columns and
+        "Chave_Acesso" in df_resumo.columns and
+        not df_resumo.empty
+    ):
+        df_resumo = df_resumo[df_resumo["Chave_Acesso"].astype(str).isin(chaves_autorizadas_validas)]
+    # Filtrar df_resumo para considerar apenas notas autorizadas e não canceladas antes do groupby
+    if (
+        "Chave_Acesso" in df_resumo.columns and
+        chaves_autorizadas_validas
+    ):
+        df_resumo = df_resumo[df_resumo["Chave_Acesso"].astype(str).isin(chaves_autorizadas_validas)]
     df_resumo_grouped = df_resumo.groupby(["CST", "CFOP", "Alíquota"], dropna=False).agg({
         "Valor Total": "sum",
         "Base de Cálculo": "sum",
@@ -234,6 +276,10 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
     df_seq = pd.DataFrame(df_seq)
 
     df_xml_completo = pd.DataFrame(xml_completo)
+    # Filtrar XML_Completo apenas para notas autorizadas válidas
+    if "Chave_Acesso" in df_dados.columns and not df_xml_completo.empty:
+        if "Chave_Acesso" in df_xml_completo.columns:
+            df_xml_completo = df_xml_completo[df_xml_completo["Chave_Acesso"].astype(str).isin(chaves_autorizadas_validas)]
     # Renomear colunas para nomes mais legíveis
     colunas_legiveis = {
         "nNF": "Número NF",
@@ -350,9 +396,31 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                                 fmt = moeda if col in ["Valor_Total", "Valor Total", "Base de Cálculo", "ICMS"] else texto
                             ws.write(r+1, c, val, fmt)
 
-                # Nova aba de resumo por nota fiscal
+                # Nova aba de resumo por nota fiscal (apenas notas autorizadas e não canceladas)
                 if not df_xml_completo.empty:
-                    resumo_nf = df_xml_completo.groupby(["Número NF", "Série"], dropna=False).agg({
+                    # Garante que a coluna Chave_Acesso exista em df_xml_completo
+                    if "Chave_Acesso" not in df_xml_completo.columns:
+                        # Tenta preencher Chave_Acesso a partir de df_dados usando Número NF e Série
+                        if "Número NF" in df_xml_completo.columns and "Série" in df_xml_completo.columns and "Chave_Acesso" in df_dados.columns:
+                            # Garante que ambas as colunas estejam como string para o merge
+                            df_xml_completo["Número NF"] = df_xml_completo["Número NF"].astype(str)
+                            df_xml_completo["Série"] = df_xml_completo["Série"].astype(str)
+                            dados_merge = df_dados[["Número_Doc", "Serie", "Chave_Acesso"]].copy()
+                            dados_merge["Número_Doc"] = dados_merge["Número_Doc"].astype(str)
+                            dados_merge["Serie"] = dados_merge["Serie"].astype(str)
+                            dados_merge = dados_merge.rename(columns={"Número_Doc": "Número NF", "Serie": "Série"})
+                            df_xml_completo = pd.merge(
+                                df_xml_completo,
+                                dados_merge,
+                                on=["Número NF", "Série"],
+                                how="left"
+                            )
+                    # Filtra pelas chaves válidas
+                    if "Chave_Acesso" in df_xml_completo.columns and chaves_autorizadas_validas:
+                        df_xml_filtrado = df_xml_completo[df_xml_completo["Chave_Acesso"].astype(str).isin(chaves_autorizadas_validas)]
+                    else:
+                        df_xml_filtrado = df_xml_completo.copy()
+                    resumo_nf = df_xml_filtrado.groupby(["Número NF", "Série"], dropna=False).agg({
                         "Valor Produto": "sum",
                         "Valor Desconto": "sum",
                         "Valor ICMS": "sum",
