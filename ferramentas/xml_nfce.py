@@ -450,10 +450,30 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                 escrever_aba(df_dados, "Dados_NFC-e", colorir_cancelada=True)
                 escrever_aba(df_resumo_grouped, "Resumo CFOP")
                 escrever_aba(resumo_nf, "Resumo_NFC-e")
-                # Nova aba Resumo_Produtos preenchida com dados reais
+                # Nova aba Resumo_Produtos preenchida apenas com notas autorizadas e não canceladas
                 if not df_xml_completo.empty:
+                    # Garante que a coluna Chave_Acesso exista em df_xml_completo
+                    if "Chave_Acesso" not in df_xml_completo.columns:
+                        # Tenta preencher Chave_Acesso a partir de df_dados usando Número NF e Série
+                        if "Número NF" in df_xml_completo.columns and "Série" in df_xml_completo.columns and "Chave_Acesso" in df_dados.columns:
+                            df_xml_completo["Número NF"] = df_xml_completo["Número NF"].astype(str)
+                            df_xml_completo["Série"] = df_xml_completo["Série"].astype(str)
+                            dados_merge = df_dados[["Número_Doc", "Serie", "Chave_Acesso"]].copy()
+                            dados_merge["Número_Doc"] = dados_merge["Número_Doc"].astype(str)
+                            dados_merge["Serie"] = dados_merge["Serie"].astype(str)
+                            dados_merge = dados_merge.rename(columns={"Número_Doc": "Número NF", "Serie": "Série"})
+                            df_xml_completo = pd.merge(
+                                df_xml_completo,
+                                dados_merge,
+                                on=["Número NF", "Série"],
+                                how="left"
+                            )
+                    # Filtra pelas chaves válidas
+                    if "Chave_Acesso" in df_xml_completo.columns and chaves_autorizadas_validas:
+                        df_xml_filtrado = df_xml_completo[df_xml_completo["Chave_Acesso"].astype(str).isin(chaves_autorizadas_validas)]
+                    else:
+                        df_xml_filtrado = df_xml_completo.copy()
                     group_cols = ["Código Produto", "Descrição Produto", "NCM"]
-                    # Corrigir agregação para garantir que Base_Calculo seja valor monetário e Redução_BC_% seja porcentagem
                     agg_dict = {
                         "Valor Produto": "sum",
                         "Valor ICMS": "sum",
@@ -463,9 +483,7 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                         "CST ICMS": lambda x: x.mode().iloc[0] if not x.mode().empty else '',
                         "Alíquota ICMS (%)": lambda x: x.mode().iloc[0] if not x.mode().empty else ''
                     }
-                    # Redução_BC_% (pRedBC) é uma porcentagem, não deve ser somada nem usada como base de cálculo
-                    # Não incluir Redução_BC_% no agrupamento
-                    resumo_produtos = df_xml_completo.groupby(group_cols, dropna=False).agg(agg_dict).reset_index()
+                    resumo_produtos = df_xml_filtrado.groupby(group_cols, dropna=False).agg(agg_dict).reset_index()
                     rename_dict = {
                         "Código Produto": "Cod_Produto",
                         "Descrição Produto": "Descrição_Produto",
@@ -481,13 +499,9 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                     if "pRedBC" in resumo_produtos.columns:
                         rename_dict["pRedBC"] = "Redução_BC_%"
                     resumo_produtos = resumo_produtos.rename(columns=rename_dict)
-                    # Garante a coluna Redução_BC_% mesmo se não existir
-                    # Não criar coluna Redução_BC_%
-                    # Seleciona as colunas na ordem correta
                     resumo_produtos = resumo_produtos[[
                         "Cod_Produto", "Descrição_Produto", "NCM", "Quantidade", "Valor_Unitario", "Valor_Total", "CST_ICMS", "Base_Calculo", "Aliquota_ICMS_(%)", "Valor_ICMS"
                     ]]
-                    # Ordena pelo código do produto do menor para o maior
                     try:
                         resumo_produtos = resumo_produtos.sort_values(by="Cod_Produto", key=lambda x: pd.to_numeric(x, errors="coerce")).reset_index(drop=True)
                     except Exception:
@@ -501,7 +515,27 @@ Essa ferramenta extrai informações de arquivos XML de NFC-e, facilitando a con
                     # Não formatar Redução_BC_%
                 
                 escrever_aba(resumo_produtos, "Resumo_Produtos")
-                escrever_aba(df_xml_completo, "XML_Completo")
+                # Filtra df_xml_completo para considerar apenas notas autorizadas e não canceladas
+                if "Chave_Acesso" not in df_xml_completo.columns:
+                    # Tenta preencher Chave_Acesso a partir de df_dados usando Número NF e Série
+                    if "Número NF" in df_xml_completo.columns and "Série" in df_xml_completo.columns and "Chave_Acesso" in df_dados.columns:
+                        df_xml_completo["Número NF"] = df_xml_completo["Número NF"].astype(str)
+                        df_xml_completo["Série"] = df_xml_completo["Série"].astype(str)
+                        dados_merge = df_dados[["Número_Doc", "Serie", "Chave_Acesso"]].copy()
+                        dados_merge["Número_Doc"] = dados_merge["Número_Doc"].astype(str)
+                        dados_merge["Serie"] = dados_merge["Serie"].astype(str)
+                        dados_merge = dados_merge.rename(columns={"Número_Doc": "Número NF", "Serie": "Série"})
+                        df_xml_completo = pd.merge(
+                            df_xml_completo,
+                            dados_merge,
+                            on=["Número NF", "Série"],
+                            how="left"
+                        )
+                if "Chave_Acesso" in df_xml_completo.columns and chaves_autorizadas_validas:
+                    df_xml_filtrado = df_xml_completo[df_xml_completo["Chave_Acesso"].astype(str).isin(chaves_autorizadas_validas)]
+                else:
+                    df_xml_filtrado = df_xml_completo.copy()
+                escrever_aba(df_xml_filtrado, "XML_Completo")
                 escrever_aba(df_seq, "Sequência")
                 escrever_aba(df_status, "Status")
 
